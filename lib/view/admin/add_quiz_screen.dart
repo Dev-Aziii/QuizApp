@@ -4,6 +4,7 @@ import 'package:itsreviewer_app/model/category.dart';
 import 'package:itsreviewer_app/model/question.dart';
 import 'package:itsreviewer_app/model/quiz.dart';
 import 'package:itsreviewer_app/theme/theme.dart';
+import 'dart:developer'; // ✅ for production-safe logging
 
 class AddQuizScreen extends StatefulWidget {
   final String? categoryId;
@@ -14,10 +15,12 @@ class AddQuizScreen extends StatefulWidget {
   State<AddQuizScreen> createState() => _AddQuizScreenState();
 }
 
+// Model for holding question + options controllers
 class QuestionFromItem {
   final TextEditingController questionController;
   final List<TextEditingController> optionsControllers;
   List<int> correctOptionIndexes;
+
   QuestionFromItem({
     required this.questionController,
     required this.optionsControllers,
@@ -26,8 +29,8 @@ class QuestionFromItem {
 
   void dispose() {
     questionController.dispose();
-    for (var element in optionsControllers) {
-      element.dispose();
+    for (var c in optionsControllers) {
+      c.dispose();
     }
   }
 }
@@ -45,19 +48,18 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
   void initState() {
     super.initState();
     _selectedCategoryId = widget.categoryId;
-    _addQuestion();
+    _addQuestion(); // initialize with one question
   }
 
   @override
   void dispose() {
     _titleController.dispose();
     _timeLimitController.dispose();
-    for (var item in _questionsItems) {
-      item.dispose();
-    }
+    for (var item in _questionsItems) item.dispose();
     super.dispose();
   }
 
+  /// Add a new empty question
   void _addQuestion() {
     setState(() {
       _questionsItems.add(
@@ -70,6 +72,7 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
     });
   }
 
+  /// Remove a question by index
   void _removeQuestion(int index) {
     setState(() {
       _questionsItems[index].dispose();
@@ -77,20 +80,20 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
     });
   }
 
-  Future<void> _SaveQuiz() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+  /// Save quiz to Firestore
+  Future<void> _saveQuiz() async {
+    if (!_formKey.currentState!.validate()) return;
+
     if (_selectedCategoryId == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Please select a category")));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Please select a category")),
+        );
+      }
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       final questions = _questionsItems
@@ -98,7 +101,7 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
             (item) => Question(
               text: item.questionController.text.trim(),
               options: item.optionsControllers
-                  .map((e) => e.text.trim())
+                  .map((c) => c.text.trim())
                   .toList(),
               correctOptionIndexes: item.correctOptionIndexes,
             ),
@@ -119,24 +122,29 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
         ).toMap(),
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Quiz added successfully"),
-          backgroundColor: AppTheme.secondaryColor,
-        ),
-      );
-      Navigator.pop(context);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Failed to add quiz"),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      // ✅ Safe use of context after async operation
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text("Quiz added successfully"),
+            backgroundColor: AppTheme.secondaryColor,
+          ),
+        );
+        Navigator.of(context).pop(); // go back
+      }
+    } catch (e, stack) {
+      log("Failed to add quiz", error: e, stackTrace: stack);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Failed to add quiz"),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -149,11 +157,11 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
           widget.categoryName != null
               ? "Add ${widget.categoryName} Quiz"
               : "Add Quiz Question",
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
-            onPressed: _isLoading ? null : _SaveQuiz,
+            onPressed: _isLoading ? null : _saveQuiz,
             icon: Icon(Icons.save, color: AppTheme.primaryColor),
           ),
         ],
@@ -161,276 +169,243 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: EdgeInsets.all(20),
+          padding: const EdgeInsets.all(20),
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Quiz Details",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textPrimaryColor,
-                  ),
-                ),
-                SizedBox(height: 20),
-                TextFormField(
-                  controller: _titleController,
-                  decoration: InputDecoration(
-                    labelText: "Title",
-                    hintText: "Enter quiz title",
-                    prefixIcon: Icon(Icons.title, color: AppTheme.primaryColor),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return "Please enter quiz title";
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 16),
-                if (widget.categoryId == null)
-                  StreamBuilder<QuerySnapshot>(
-                    stream: _firestore
-                        .collection('categories')
-                        .orderBy('name')
-                        .snapshots(),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasError) {
-                        return Text("Error");
-                      }
-                      if (!snapshot.hasData) {
-                        return Center(
-                          child: CircularProgressIndicator(
-                            color: AppTheme.primaryColor,
-                          ),
-                        );
-                      }
+            // Quiz Title
+            const Text(
+              "Quiz Details",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            TextFormField(
+              controller: _titleController,
+              decoration: InputDecoration(
+                labelText: "Title",
+                hintText: "Enter quiz title",
+                prefixIcon: Icon(Icons.title, color: AppTheme.primaryColor),
+              ),
+              validator: (v) =>
+                  (v == null || v.isEmpty) ? "Please enter quiz title" : null,
+            ),
+            const SizedBox(height: 16),
 
-                      final categories = snapshot.data!.docs
-                          .map(
-                            (doc) => Category.fromMap(
-                              doc.id,
-                              doc.data() as Map<String, dynamic>,
-                            ),
-                          )
-                          .toList();
+            // Category dropdown if no preselected category
+            if (widget.categoryId == null)
+              StreamBuilder<QuerySnapshot>(
+                stream: _firestore
+                    .collection('categories')
+                    .orderBy('name')
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError)
+                    return const Text("Error loading categories");
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-                      return DropdownButtonFormField<String>(
-                        value: _selectedCategoryId,
-                        decoration: InputDecoration(
-                          labelText: "Category",
-                          hintText: "Select Category",
-                          prefixIcon: Icon(
-                            Icons.category,
-                            color: AppTheme.primaryColor,
-                          ),
+                  final categories = snapshot.data!.docs
+                      .map(
+                        (doc) => Category.fromMap(
+                          doc.id,
+                          doc.data() as Map<String, dynamic>,
                         ),
-                        items: categories
-                            .map(
-                              (category) => DropdownMenuItem(
-                                value: category.id,
-                                child: Text(category.name),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedCategoryId = value;
-                          });
-                        },
-                        validator: (value) {
-                          if (value == null) {
-                            return "Please select a category";
-                          }
-                          return null;
-                        },
-                      );
-                    },
-                  ),
-                SizedBox(height: 20),
-                TextFormField(
-                  controller: _timeLimitController,
-                  decoration: InputDecoration(
-                    labelText: "Time Limit (in minutes)",
-                    hintText: "Enter Time Limit",
-                    prefixIcon: Icon(Icons.timer, color: AppTheme.primaryColor),
-                  ),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return "Please enter time limit";
-                    }
-                    final number = int.tryParse(value);
-                    if (number == null || number <= 0) {
-                      return "Please enter a valid time limit";
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Questions',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textPrimaryColor,
-                          ),
-                        ),
-                        ElevatedButton.icon(
-                          onPressed: _addQuestion,
-                          label: Text("Add Question"),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryColor,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ],
+                      )
+                      .toList();
+
+                  return DropdownButtonFormField<String>(
+                    value: _selectedCategoryId,
+                    decoration: InputDecoration(
+                      labelText: "Category",
+                      hintText: "Select Category",
+                      prefixIcon: Icon(
+                        Icons.category,
+                        color: AppTheme.primaryColor,
+                      ),
                     ),
-                    SizedBox(height: 16),
-                    ..._questionsItems.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final QuestionFromItem question = entry.value;
+                    items: categories
+                        .map(
+                          (c) => DropdownMenuItem(
+                            value: c.id,
+                            child: Text(c.name),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setState(() => _selectedCategoryId = v),
+                    validator: (v) =>
+                        v == null ? "Please select a category" : null,
+                  );
+                },
+              ),
+            const SizedBox(height: 20),
 
-                      return Card(
-                        margin: EdgeInsets.only(bottom: 16),
-                        child: Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+            // Time limit
+            TextFormField(
+              controller: _timeLimitController,
+              decoration: InputDecoration(
+                labelText: "Time Limit (in minutes)",
+                hintText: "Enter Time Limit",
+                prefixIcon: Icon(Icons.timer, color: AppTheme.primaryColor),
+              ),
+              keyboardType: TextInputType.number,
+              validator: (v) {
+                if (v == null || v.isEmpty) return "Please enter time limit";
+                final n = int.tryParse(v);
+                if (n == null || n <= 0)
+                  return "Please enter a valid time limit";
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Questions list
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Questions",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                ElevatedButton.icon(
+                  onPressed: _addQuestion,
+                  icon: const Icon(Icons.add),
+                  label: const Text("Add Question"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Question cards
+            ..._questionsItems.asMap().entries.map((entry) {
+              final index = entry.key;
+              final question = entry.value;
+
+              return Card(
+                margin: const EdgeInsets.only(bottom: 16),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Question header + delete button
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Question ${index + 1}",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primaryColor,
+                            ),
+                          ),
+                          if (_questionsItems.length > 1)
+                            IconButton(
+                              onPressed: () => _removeQuestion(index),
+                              icon: const Icon(
+                                Icons.delete,
+                                color: Colors.redAccent,
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: question.questionController,
+                        decoration: InputDecoration(
+                          labelText: "Question",
+                          hintText: "Enter question",
+                          prefixIcon: Icon(
+                            Icons.question_mark,
+                            color: AppTheme.primaryColor,
+                          ),
+                        ),
+                        validator: (v) => (v == null || v.isEmpty)
+                            ? "Please enter question"
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Options
+                      ...question.optionsControllers.asMap().entries.map((
+                        optEntry,
+                      ) {
+                        final optIndex = optEntry.key;
+                        final controller = optEntry.value;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
                             children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    "Question ${index + 1}",
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppTheme.primaryColor,
-                                    ),
-                                  ),
-                                  if (_questionsItems.length > 1)
-                                    IconButton(
-                                      onPressed: () {
-                                        _removeQuestion(index);
-                                      },
-                                      icon: Icon(
-                                        Icons.delete,
-                                        color: Colors.redAccent,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              SizedBox(height: 16),
-                              TextFormField(
-                                controller: question.questionController,
-                                decoration: InputDecoration(
-                                  labelText: "Question",
-                                  hintText: "Enter question",
-                                  prefixIcon: Icon(
-                                    Icons.question_mark,
-                                    color: AppTheme.primaryColor,
-                                  ),
+                              Checkbox(
+                                activeColor: AppTheme.primaryColor,
+                                value: question.correctOptionIndexes.contains(
+                                  optIndex,
                                 ),
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return "Please enter question";
-                                  }
-                                  return null;
+                                onChanged: (selected) {
+                                  setState(() {
+                                    if (selected == true) {
+                                      question.correctOptionIndexes.add(
+                                        optIndex,
+                                      );
+                                    } else {
+                                      question.correctOptionIndexes.remove(
+                                        optIndex,
+                                      );
+                                    }
+                                  });
                                 },
                               ),
-                              SizedBox(height: 16),
-                              ...question.optionsControllers.asMap().entries.map(
-                                (entry) {
-                                  final optionIndex = entry.key;
-                                  final controller = entry.value;
-
-                                  return Padding(
-                                    padding: EdgeInsets.only(bottom: 8),
-                                    child: Row(
-                                      children: [
-                                        Checkbox(
-                                          activeColor: AppTheme.primaryColor,
-                                          value: question.correctOptionIndexes
-                                              .contains(optionIndex),
-                                          onChanged: (selected) {
-                                            setState(() {
-                                              if (selected == true) {
-                                                question.correctOptionIndexes
-                                                    .add(optionIndex);
-                                              } else {
-                                                question.correctOptionIndexes
-                                                    .remove(optionIndex);
-                                              }
-                                            });
-                                          },
-                                        ),
-                                        Expanded(
-                                          child: TextFormField(
-                                            controller: controller,
-                                            decoration: InputDecoration(
-                                              labelText:
-                                                  "Option ${optionIndex + 1} ",
-                                              hintText: "Enter Option",
-                                            ),
-                                            validator: (value) {
-                                              if (value == null ||
-                                                  value.isEmpty) {
-                                                return "Please enter option";
-                                              }
-                                              return null;
-                                            },
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
+                              Expanded(
+                                child: TextFormField(
+                                  controller: controller,
+                                  decoration: InputDecoration(
+                                    labelText: "Option ${optIndex + 1}",
+                                    hintText: "Enter Option",
+                                  ),
+                                  validator: (v) => (v == null || v.isEmpty)
+                                      ? "Please enter option"
+                                      : null,
+                                ),
                               ),
                             ],
                           ),
-                        ),
-                      );
-                    }),
-                    SizedBox(height: 32),
-                    Center(
-                      child: SizedBox(
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _SaveQuiz,
-                          child: _isLoading
-                              ? SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
-                                    ),
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : Text(
-                                  "Save Quiz",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                        ),
-                      ),
-                    ),
-                  ],
+                        );
+                      }),
+                    ],
+                  ),
                 ),
-              ],
+              );
+            }),
+
+            const SizedBox(height: 32),
+            // Save button
+            Center(
+              child: SizedBox(
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _saveQuiz,
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          "Save Quiz",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                ),
+              ),
             ),
           ],
         ),
