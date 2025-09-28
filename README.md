@@ -1,16 +1,69 @@
-# itsreviewer_app
+# 📚 ITS Reviewer App
 
-A new Flutter project.
+A Flutter-based quiz and reviewer application designed to help users study interactively.  
+The app supports **user authentication**, **role-based access (Admin/User)**, **quiz management**, and **quiz history tracking**.
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## 🚀 Features
+- 🔑 User authentication (Email/Password & Google Sign-In)  
+- 👥 Role-based access (Admin dashboard & User dashboard)  
+- 📝 Quiz management (create, update, delete quizzes — for Admins)  
+- 🎯 Take quizzes with progress tracking  
+- 📊 Quiz history stored in Firestore for review  
+- 🌙 Clean and responsive UI  
 
-A few resources to get you started if this is your first Flutter project:
+---
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## 🛠️ Tech Stack
+- **Flutter** (Dart)  
+- **Firebase Authentication** (Email/Password & Google)  
+- **Cloud Firestore** (User data, quizzes, and history)  
+- **Firebase Hosting/Functions** (if used)  
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+---
+
+## 📂 Project Structure
+itsreviewer_app/
+│-- android/ # Android-specific files
+│-- ios/ # iOS-specific files
+│-- lib/ # Main Flutter app source code
+│ │-- view/ # UI screens
+│ │-- widgets/ # Reusable widgets
+│ │-- services/ # Firebase/Auth services
+│ │-- models/ # Data models
+│-- assets/ # Images, icons, etc.
+│-- test/ # Unit and widget tests
+│-- pubspec.yaml # Flutter dependencies
+│-- firebase.json # Firebase project config (safe to share)
+│-- firestore.rules # Firestore security rules
+│-- firestore.indexes.json# Firestore indexes
+
+yaml
+Copy code
+
+---
+
+## ⚙️ Setup Instructions
+1. **Clone the repo**
+   ```bash
+   git clone https://github.com/your-username/itsreviewer_app.git
+   cd itsreviewer_app
+Install dependencies
+
+bash
+Copy code
+flutter pub get
+Configure Firebase
+
+Add your google-services.json in /android/app/.
+
+Add your GoogleService-Info.plist in /ios/Runner/.
+
+(Optional) Update firebase.json, firestore.rules, and firestore.indexes.json if needed.
+
+Run the app
+
+bash
+Copy code
+flutter run
