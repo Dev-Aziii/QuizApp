@@ -4,7 +4,7 @@ import 'package:itsreviewer_app/model/category.dart';
 import 'package:itsreviewer_app/model/question.dart';
 import 'package:itsreviewer_app/model/quiz.dart';
 import 'package:itsreviewer_app/theme/theme.dart';
-import 'dart:developer'; // ✅ for production-safe logging
+import 'dart:developer';
 
 class AddQuizScreen extends StatefulWidget {
   final String? categoryId;
@@ -15,7 +15,7 @@ class AddQuizScreen extends StatefulWidget {
   State<AddQuizScreen> createState() => _AddQuizScreenState();
 }
 
-// Model for holding question + options controllers
+// Models
 class QuestionFromItem {
   final TextEditingController questionController;
   final List<TextEditingController> optionsControllers;
@@ -55,7 +55,12 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
   void dispose() {
     _titleController.dispose();
     _timeLimitController.dispose();
-    for (var item in _questionsItems) item.dispose();
+
+    // Dispose all question items
+    for (var item in _questionsItems) {
+      item.dispose();
+    }
+
     super.dispose();
   }
 
@@ -122,7 +127,6 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
         ).toMap(),
       );
 
-      // ✅ Safe use of context after async operation
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -130,7 +134,7 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
             backgroundColor: AppTheme.secondaryColor,
           ),
         );
-        Navigator.of(context).pop(); // go back
+        Navigator.of(context).pop();
       }
     } catch (e, stack) {
       log("Failed to add quiz", error: e, stackTrace: stack);
@@ -197,8 +201,9 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
                     .orderBy('name')
                     .snapshots(),
                 builder: (context, snapshot) {
-                  if (snapshot.hasError)
+                  if (snapshot.hasError) {
                     return const Text("Error loading categories");
+                  }
                   if (!snapshot.hasData) {
                     return const Center(child: CircularProgressIndicator());
                   }
@@ -213,7 +218,7 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
                       .toList();
 
                   return DropdownButtonFormField<String>(
-                    value: _selectedCategoryId,
+                    initialValue: _selectedCategoryId,
                     decoration: InputDecoration(
                       labelText: "Category",
                       hintText: "Select Category",
@@ -250,8 +255,9 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
               validator: (v) {
                 if (v == null || v.isEmpty) return "Please enter time limit";
                 final n = int.tryParse(v);
-                if (n == null || n <= 0)
+                if (n == null || n <= 0) {
                   return "Please enter a valid time limit";
+                }
                 return null;
               },
             ),

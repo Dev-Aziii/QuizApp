@@ -1,5 +1,3 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:itsreviewer_app/theme/theme.dart';
@@ -17,46 +15,8 @@ class AdminHomeScreen extends StatefulWidget {
 
 class _AdminHomeScreenState extends State<AdminHomeScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
   bool _expandCategoryStats = false;
   bool _expandRecentActivity = false;
-
-  Future<Map<String, dynamic>> _fetchStatistics() async {
-    final categoriesCount = await _firestore
-        .collection('categories')
-        .count()
-        .get();
-    final quizzesCount = await _firestore.collection('quizzes').count().get();
-
-    final latestQuizzes = await _firestore
-        .collection('quizzes')
-        .orderBy('createdAt', descending: true)
-        .limit(5)
-        .get();
-
-    final categories = await _firestore.collection('categories').get();
-    final categoryData = await Future.wait(
-      categories.docs.map((category) async {
-        final quizCount = await _firestore
-            .collection('quizzes')
-            .where('categoryId', isEqualTo: category.id)
-            .count()
-            .get();
-
-        return {
-          'name': category.data()['name'] as String,
-          'count': quizCount.count,
-        };
-      }),
-    );
-
-    return {
-      'totalCategories': categoriesCount.count,
-      'totalQuizzes': quizzesCount.count,
-      'latestQuizzes': latestQuizzes.docs,
-      'categoryData': categoryData,
-    };
-  }
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
@@ -77,7 +37,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color, size: 25),
@@ -120,7 +80,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.1),
+                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: AppTheme.primaryColor, size: 30),
@@ -145,7 +105,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     );
   }
 
-  Widget _buildCategoryStats(List<dynamic> categoryData) {
+  Widget _buildCategoryStats(List<Map<String, dynamic>> categoryData) {
     final totalQuizzes = categoryData.fold<int>(
       0,
       (sum, item) => sum + (item['count'] as int),
@@ -201,7 +161,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -243,15 +203,6 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         ),
         centerTitle: true,
         elevation: 0,
-        leading: Navigator.canPop(context)
-            ? IconButton(
-                icon: const Icon(
-                  Icons.arrow_back,
-                  color: AppTheme.textPrimaryColor,
-                ),
-                onPressed: () => Navigator.pop(context),
-              )
-            : null,
       ),
       drawer: Drawer(
         child: Column(
@@ -311,7 +262,6 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 if (shouldLogout == true) {
                   final _authService = AuthService();
                   await _authService.signOut();
-
                   if (context.mounted) {
                     Navigator.of(context).pushReplacementNamed('/login');
                   }
@@ -322,282 +272,304 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           ],
         ),
       ),
-      body: FutureBuilder(
-        future: _fetchStatistics(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _firestore.collection('categories').snapshots(),
+        builder: (context, categorySnapshot) {
+          if (!categorySnapshot.hasData) {
             return Center(
               child: CircularProgressIndicator(color: AppTheme.primaryColor),
             );
           }
+          final categories = categorySnapshot.data!.docs;
 
-          if (snapshot.hasError) {
-            return const Center(child: Text('An error occured'));
-          }
-
-          final Map<String, dynamic> stats = snapshot.data!;
-          final List<dynamic> categoryData = stats['categoryData'];
-          final List<QueryDocumentSnapshot> latestQuizzes =
-              stats['latestQuizzes'];
-
-          return SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Welcome Admin",
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimaryColor,
-                    ),
+          return StreamBuilder<QuerySnapshot>(
+            stream: _firestore.collection('quizzes').snapshots(),
+            builder: (context, quizSnapshot) {
+              if (!quizSnapshot.hasData) {
+                return Center(
+                  child: CircularProgressIndicator(
+                    color: AppTheme.primaryColor,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Here's your quiz application overview",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: AppTheme.textSecondayColor,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
+                );
+              }
+              final quizzes = quizSnapshot.data!.docs;
+
+              // Category statistics
+              final categoryData = categories.map((categoryDoc) {
+                final quizCount = quizzes
+                    .where((quizDoc) => quizDoc['categoryId'] == categoryDoc.id)
+                    .length;
+                return {'name': categoryDoc['name'], 'count': quizCount};
+              }).toList();
+
+              final totalCategories = categories.length;
+              final totalQuizzes = quizzes.length;
+              final latestQuizzes = quizzes.map((doc) => doc).toList()
+                ..sort((a, b) => b['createdAt'].compareTo(a['createdAt']));
+
+              return SafeArea(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          'Total Categories',
-                          stats['totalCategories'].toString(),
-                          Icons.category_rounded,
-                          AppTheme.primaryColor,
+                      Text(
+                        "Welcome Admin",
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimaryColor,
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildStatCard(
-                          'Total Quizzes',
-                          stats['totalQuizzes'].toString(),
-                          Icons.quiz_rounded,
-                          AppTheme.secondaryColor,
+                      const SizedBox(height: 8),
+                      Text(
+                        "Here's your quiz application overview",
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: AppTheme.textSecondayColor,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildStatCard(
+                              'Total Categories',
+                              totalCategories.toString(),
+                              Icons.category_rounded,
+                              AppTheme.primaryColor,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildStatCard(
+                              'Total Quizzes',
+                              totalQuizzes.toString(),
+                              Icons.quiz_rounded,
+                              AppTheme.secondaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.pie_chart_rounded,
+                                    color: AppTheme.primaryColor,
+                                    size: 24,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    'Category Statistics',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.textPrimaryColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                              _buildCategoryStats(categoryData),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      // Recent Activity
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.history_outlined,
+                                    color: AppTheme.primaryColor,
+                                    size: 24,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    'Recent Activity',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.textPrimaryColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                              ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: _expandRecentActivity
+                                    ? latestQuizzes.length
+                                    : latestQuizzes.take(3).length,
+                                itemBuilder: (context, index) {
+                                  final quiz =
+                                      latestQuizzes[index].data()
+                                          as Map<String, dynamic>;
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 16),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.primaryColor
+                                                .withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: Icon(
+                                            Icons.quiz_rounded,
+                                            color: AppTheme.primaryColor,
+                                            size: 20,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                quiz['title'],
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color:
+                                                      AppTheme.textPrimaryColor,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                'Created on ${_formatDate(quiz['createdAt'].toDate())}',
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                              if (latestQuizzes.length > 3)
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: TextButton(
+                                    onPressed: () {
+                                      setState(
+                                        () => _expandRecentActivity =
+                                            !_expandRecentActivity,
+                                      );
+                                    },
+                                    child: Text(
+                                      _expandRecentActivity
+                                          ? "Show Less"
+                                          : "Show More",
+                                      style: TextStyle(
+                                        color: AppTheme.primaryColor,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      // Quiz Actions
+                      Card(
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 3,
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.speed_rounded,
+                                    color: AppTheme.primaryColor,
+                                    size: 26,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    'Quiz Actions',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.textPrimaryColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 24),
+                              GridView.count(
+                                crossAxisCount: 2,
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                mainAxisSpacing: 16,
+                                crossAxisSpacing: 16,
+                                childAspectRatio: 0.85,
+                                children: [
+                                  _buildDashboardCard(
+                                    context,
+                                    'Quizzes',
+                                    Icons.quiz_rounded,
+                                    () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const ManageQuizesScreen(),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  _buildDashboardCard(
+                                    context,
+                                    'Categories',
+                                    Icons.category_rounded,
+                                    () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const ManageCategoriesScreen(),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.pie_chart_rounded,
-                                color: AppTheme.primaryColor,
-                                size: 24,
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Category Statistics',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.textPrimaryColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                          _buildCategoryStats(categoryData),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.history_outlined,
-                                color: AppTheme.primaryColor,
-                                size: 24,
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Recent Activity',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.textPrimaryColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                          ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: _expandRecentActivity
-                                ? latestQuizzes.length
-                                : latestQuizzes.take(3).length,
-                            itemBuilder: (context, index) {
-                              final quiz =
-                                  latestQuizzes[index].data()
-                                      as Map<String, dynamic>;
-
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 16),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.primaryColor
-                                            .withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Icon(
-                                        Icons.quiz_rounded,
-                                        color: AppTheme.primaryColor,
-                                        size: 20,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            quiz['title'],
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              color: AppTheme.textPrimaryColor,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            'Created on ${_formatDate(quiz['createdAt'].toDate())}',
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-
-                          if (latestQuizzes.length > 3)
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: TextButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _expandRecentActivity =
-                                        !_expandRecentActivity;
-                                  });
-                                },
-                                child: Text(
-                                  _expandRecentActivity
-                                      ? "Show Less"
-                                      : "Show More",
-                                  style: TextStyle(
-                                    color: AppTheme.primaryColor,
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Card(
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 3,
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.speed_rounded,
-                                color: AppTheme.primaryColor,
-                                size: 26,
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Quiz Actions',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.textPrimaryColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-                          GridView.count(
-                            crossAxisCount: 2,
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            mainAxisSpacing: 16,
-                            crossAxisSpacing: 16,
-                            childAspectRatio: 0.85,
-                            children: [
-                              _buildDashboardCard(
-                                context,
-                                'Quizzes',
-                                Icons.quiz_rounded,
-                                () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const ManageQuizesScreen(),
-                                    ),
-                                  );
-                                },
-                              ),
-                              _buildDashboardCard(
-                                context,
-                                'Categories',
-                                Icons.category_rounded,
-                                () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const ManageCategoriesScreen(),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           );
         },
       ),

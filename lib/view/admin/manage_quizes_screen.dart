@@ -109,6 +109,7 @@ class _ManageQuizesScreenState extends State<ManageQuizesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         automaticallyImplyLeading: true,
         title: _buildTitle(),
