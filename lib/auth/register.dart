@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:itsreviewer_app/view/auth/auth.dart';
+import 'package:itsreviewer_app/auth/auth.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});

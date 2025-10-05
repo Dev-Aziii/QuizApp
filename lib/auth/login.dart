@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:itsreviewer_app/view/auth/auth.dart';
-import 'package:itsreviewer_app/view/auth/register.dart';
+import 'package:itsreviewer_app/auth/auth.dart';
+import 'package:itsreviewer_app/auth/register.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});

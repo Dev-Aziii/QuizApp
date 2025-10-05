@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:itsreviewer_app/model/category.dart';
 import 'package:itsreviewer_app/theme/theme.dart';
-import 'package:itsreviewer_app/view/auth/auth.dart';
+import 'package:itsreviewer_app/auth/auth.dart';
 import 'package:itsreviewer_app/view/user/category_screen.dart';
 import 'package:itsreviewer_app/view/widgets/confirm_dialog.dart';
 

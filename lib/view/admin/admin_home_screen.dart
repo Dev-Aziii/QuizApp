@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:itsreviewer_app/theme/theme.dart';
 import 'package:itsreviewer_app/view/admin/manage_categories_screen.dart';
 import 'package:itsreviewer_app/view/admin/manage_quizes_screen.dart';
-import 'package:itsreviewer_app/view/auth/auth.dart';
+import 'package:itsreviewer_app/auth/auth.dart';
 import 'package:itsreviewer_app/view/widgets/confirm_dialog.dart';
 
 class AdminHomeScreen extends StatefulWidget {

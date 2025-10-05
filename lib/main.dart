@@ -1,7 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:itsreviewer_app/view/admin/admin_home_screen.dart';
-import 'package:itsreviewer_app/view/auth/login.dart';
+import 'package:itsreviewer_app/auth/login.dart';
 import 'package:itsreviewer_app/view/user/home_screen.dart';
 
 void main() async {
