@@ -4,8 +4,6 @@ import 'package:itsreviewer_app/model/question.dart';
 import 'package:itsreviewer_app/model/quiz.dart';
 import 'package:itsreviewer_app/theme/theme.dart';
 
-// (Same imports)
-
 class EditQuizScreen extends StatefulWidget {
   final Quiz quiz;
   const EditQuizScreen({super.key, required this.quiz});
@@ -37,6 +35,7 @@ class _EditQuizScreenState extends State<EditQuizScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _titleController;
   late TextEditingController _timeLimitController;
+  bool _noTimeLimit = false;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   bool _isLoading = false;
   late List<QuestionFormItem> _questionsItems;
@@ -59,8 +58,11 @@ class _EditQuizScreenState extends State<EditQuizScreen> {
 
   void _initData() {
     _titleController = TextEditingController(text: widget.quiz.title);
+    _noTimeLimit = widget.quiz.timeLimit == null;
     _timeLimitController = TextEditingController(
-      text: widget.quiz.timeLimit.toString(),
+      text: widget.quiz.timeLimit != null
+          ? widget.quiz.timeLimit.toString()
+          : "",
     );
 
     _questionsItems = widget.quiz.questions.map((question) {
@@ -94,12 +96,14 @@ class _EditQuizScreenState extends State<EditQuizScreen> {
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Quiz must have at least one question")),
+        const SnackBar(content: Text("Quiz must have at least one question")),
       );
     }
   }
 
   Future<void> _updateQuiz() async {
+    FocusScope.of(context).unfocus();
+
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -117,9 +121,13 @@ class _EditQuizScreenState extends State<EditQuizScreen> {
           )
           .toList();
 
+      final int? timeLimit = _noTimeLimit
+          ? null
+          : int.parse(_timeLimitController.text.trim());
+
       final updateQuiz = widget.quiz.copyWith(
         title: _titleController.text.trim(),
-        timeLimit: int.parse(_timeLimitController.text),
+        timeLimit: timeLimit,
         questions: questions,
         createdAt: widget.quiz.createdAt,
       );
@@ -132,7 +140,7 @@ class _EditQuizScreenState extends State<EditQuizScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Quiz updated successfully"),
+            content: const Text("Quiz updated successfully"),
             backgroundColor: AppTheme.secondaryColor,
           ),
         );
@@ -142,7 +150,7 @@ class _EditQuizScreenState extends State<EditQuizScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text("Failed to update quiz"),
             backgroundColor: Colors.redAccent,
           ),
@@ -158,7 +166,10 @@ class _EditQuizScreenState extends State<EditQuizScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppTheme.backgroundColor,
-        title: Text("Edit Quiz", style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          "Edit Quiz",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         actions: [
           IconButton(
             onPressed: _isLoading ? null : _updateQuiz,
@@ -169,48 +180,80 @@ class _EditQuizScreenState extends State<EditQuizScreen> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: EdgeInsets.all(20),
+          padding: const EdgeInsets.all(20),
           children: [
+            // Quiz Title
             TextFormField(
               controller: _titleController,
               decoration: InputDecoration(
                 labelText: "Title",
                 prefixIcon: Icon(Icons.title, color: AppTheme.primaryColor),
               ),
-              validator: (value) =>
-                  value == null || value.isEmpty ? "Enter quiz title" : null,
+              validator: (value) => value == null || value.trim().isEmpty
+                  ? "Enter quiz title"
+                  : null,
             ),
-            SizedBox(height: 16),
-            TextFormField(
-              controller: _timeLimitController,
-              decoration: InputDecoration(
-                labelText: "Time Limit (minutes)",
-                prefixIcon: Icon(Icons.timer, color: AppTheme.primaryColor),
-              ),
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return "Enter time limit";
-                }
-                final number = int.tryParse(value);
-                if (number == null || number <= 0) {
-                  return "Enter valid time limit";
-                }
-                return null;
-              },
+            const SizedBox(height: 16),
+
+            // Time limit + switch
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _timeLimitController,
+                    decoration: InputDecoration(
+                      labelText: "Time Limit (minutes)",
+                      prefixIcon: Icon(
+                        Icons.timer,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                    keyboardType: TextInputType.number,
+                    enabled: !_noTimeLimit,
+                    validator: (value) {
+                      if (_noTimeLimit) return null;
+                      if (value == null || value.trim().isEmpty) {
+                        return "Enter time limit";
+                      }
+                      final number = int.tryParse(value.trim());
+                      if (number == null || number <= 0) {
+                        return "Enter valid time limit";
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  children: [
+                    const Text("No Time Limit"),
+                    Switch(
+                      value: _noTimeLimit,
+                      onChanged: (v) {
+                        setState(() {
+                          _noTimeLimit = v;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ],
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
+
+            // Questions
             ..._questionsItems.asMap().entries.map((entry) {
               final index = entry.key;
               final question = entry.value;
 
               return Card(
-                margin: EdgeInsets.only(bottom: 16),
+                margin: const EdgeInsets.only(bottom: 16),
                 child: Padding(
-                  padding: EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Question header
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -225,18 +268,24 @@ class _EditQuizScreenState extends State<EditQuizScreen> {
                           if (_questionsItems.length > 1)
                             IconButton(
                               onPressed: () => _removeQuestion(index),
-                              icon: Icon(Icons.delete, color: Colors.red),
+                              icon: const Icon(Icons.delete, color: Colors.red),
                             ),
                         ],
                       ),
+                      const SizedBox(height: 8),
+                      // Question text
                       TextFormField(
                         controller: question.questionController,
-                        decoration: InputDecoration(labelText: "Question"),
-                        validator: (value) => value == null || value.isEmpty
+                        decoration: const InputDecoration(
+                          labelText: "Question",
+                        ),
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
                             ? "Enter question"
                             : null,
                       ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 8),
+                      // Options
                       ...question.optionsControllers.asMap().entries.map((opt) {
                         final optIndex = opt.key;
                         final controller = opt.value;
@@ -267,7 +316,7 @@ class _EditQuizScreenState extends State<EditQuizScreen> {
                                   labelText: "Option ${optIndex + 1}",
                                 ),
                                 validator: (value) =>
-                                    value == null || value.isEmpty
+                                    value == null || value.trim().isEmpty
                                     ? "Enter option"
                                     : null,
                               ),
@@ -280,12 +329,13 @@ class _EditQuizScreenState extends State<EditQuizScreen> {
                 ),
               );
             }),
-            SizedBox(height: 16),
+
+            const SizedBox(height: 16),
             Center(
               child: ElevatedButton.icon(
                 onPressed: _addQuestion,
-                label: Text("Add Question"),
-                icon: Icon(Icons.add),
+                label: const Text("Add Question"),
+                icon: const Icon(Icons.add),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
                   foregroundColor: Colors.white,

@@ -301,7 +301,12 @@ class _ManageQuizesScreenState extends State<ManageQuizesScreen> {
                                 SizedBox(width: 16),
                                 Icon(Icons.timer_outlined, size: 16),
                                 SizedBox(width: 4),
-                                Text("${quiz.timeLimit} mins"),
+                                Text(
+                                  quiz.timeLimit != null
+                                      ? "${quiz.timeLimit} mins"
+                                      : "Unlimited",
+                                  style: TextStyle(fontSize: 16),
+                                ),
                               ],
                             ),
                           ],

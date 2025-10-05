@@ -15,7 +15,6 @@ class AddQuizScreen extends StatefulWidget {
   State<AddQuizScreen> createState() => _AddQuizScreenState();
 }
 
-// Models
 class QuestionFromItem {
   final TextEditingController questionController;
   final List<TextEditingController> optionsControllers;
@@ -41,6 +40,7 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
   final _timeLimitController = TextEditingController();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   bool _isLoading = false;
+  bool _noTimeLimit = false;
   String? _selectedCategoryId;
   final List<QuestionFromItem> _questionsItems = [];
 
@@ -48,23 +48,19 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
   void initState() {
     super.initState();
     _selectedCategoryId = widget.categoryId;
-    _addQuestion(); // initialize with one question
+    _addQuestion();
   }
 
   @override
   void dispose() {
     _titleController.dispose();
     _timeLimitController.dispose();
-
-    // Dispose all question items
     for (var item in _questionsItems) {
       item.dispose();
     }
-
     super.dispose();
   }
 
-  /// Add a new empty question
   void _addQuestion() {
     setState(() {
       _questionsItems.add(
@@ -77,7 +73,6 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
     });
   }
 
-  /// Remove a question by index
   void _removeQuestion(int index) {
     setState(() {
       _questionsItems[index].dispose();
@@ -85,9 +80,15 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
     });
   }
 
-  /// Save quiz to Firestore
   Future<void> _saveQuiz() async {
-    if (!_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
+
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill all required fields")),
+      );
+      return;
+    }
 
     if (_selectedCategoryId == null) {
       if (context.mounted) {
@@ -115,12 +116,16 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
 
       final docRef = _firestore.collection("quizzes").doc();
 
+      final int? timeLimit = _noTimeLimit
+          ? null
+          : int.parse(_timeLimitController.text.trim());
+
       await docRef.set(
         Quiz(
           id: docRef.id,
           title: _titleController.text.trim(),
           categoryId: _selectedCategoryId!,
-          timeLimit: int.parse(_timeLimitController.text.trim()),
+          timeLimit: timeLimit,
           questions: questions,
           createdAt: DateTime.now(),
           updatedAt: null,
@@ -138,7 +143,6 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
       }
     } catch (e, stack) {
       log("Failed to add quiz", error: e, stackTrace: stack);
-
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -175,7 +179,6 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            // Quiz Title
             const Text(
               "Quiz Details",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -193,7 +196,7 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Category dropdown if no preselected category
+            // Category dropdown
             if (widget.categoryId == null)
               StreamBuilder<QuerySnapshot>(
                 stream: _firestore
@@ -218,7 +221,7 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
                       .toList();
 
                   return DropdownButtonFormField<String>(
-                    initialValue: _selectedCategoryId,
+                    value: _selectedCategoryId,
                     decoration: InputDecoration(
                       labelText: "Category",
                       hintText: "Select Category",
@@ -243,27 +246,55 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
               ),
             const SizedBox(height: 20),
 
-            // Time limit
-            TextFormField(
-              controller: _timeLimitController,
-              decoration: InputDecoration(
-                labelText: "Time Limit (in minutes)",
-                hintText: "Enter Time Limit",
-                prefixIcon: Icon(Icons.timer, color: AppTheme.primaryColor),
-              ),
-              keyboardType: TextInputType.number,
-              validator: (v) {
-                if (v == null || v.isEmpty) return "Please enter time limit";
-                final n = int.tryParse(v);
-                if (n == null || n <= 0) {
-                  return "Please enter a valid time limit";
-                }
-                return null;
-              },
+            // Time limit + No Time Limit switch
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _timeLimitController,
+                    decoration: InputDecoration(
+                      labelText: "Time Limit (minutes)",
+                      hintText: "Enter Time Limit",
+                      prefixIcon: Icon(
+                        Icons.timer,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                    keyboardType: TextInputType.number,
+                    enabled: !_noTimeLimit,
+                    validator: (v) {
+                      if (_noTimeLimit) return null;
+                      if (v == null || v.isEmpty) {
+                        return "Please enter time limit";
+                      }
+                      final n = int.tryParse(v);
+                      if (n == null || n <= 0) {
+                        return "Please enter a valid time limit";
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  children: [
+                    const Text("No Time Limit"),
+                    Switch(
+                      value: _noTimeLimit,
+                      activeColor: AppTheme.primaryColor,
+                      onChanged: (val) {
+                        setState(() {
+                          _noTimeLimit = val;
+                          if (val) _timeLimitController.clear();
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
 
-            // Questions list
+            const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -283,7 +314,7 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Question cards
+            // Question Cards
             ..._questionsItems.asMap().entries.map((entry) {
               final index = entry.key;
               final question = entry.value;
@@ -295,7 +326,6 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Question header + delete button
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -333,8 +363,6 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
                             : null,
                       ),
                       const SizedBox(height: 16),
-
-                      // Options
                       ...question.optionsControllers.asMap().entries.map((
                         optEntry,
                       ) {
@@ -386,7 +414,6 @@ class _AddQuizScreenState extends State<AddQuizScreen> {
             }),
 
             const SizedBox(height: 32),
-            // Save button
             Center(
               child: SizedBox(
                 height: 50,

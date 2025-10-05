@@ -4,7 +4,7 @@ class Quiz {
   final String id;
   final String title;
   final String categoryId;
-  final int timeLimit;
+  final int? timeLimit; // nullable
   final List<Question> questions;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -13,7 +13,7 @@ class Quiz {
     required this.id,
     required this.title,
     required this.categoryId,
-    required this.timeLimit,
+    this.timeLimit,
     required this.questions,
     required this.createdAt,
     this.updatedAt,
@@ -24,7 +24,7 @@ class Quiz {
       id: id,
       title: map['title'] ?? "",
       categoryId: map['categoryId'] ?? "",
-      timeLimit: map['timeLimit'] ?? 0,
+      timeLimit: map['timeLimit'],
       questions: ((map['questions'] ?? []) as List)
           .map((e) => Question.fromMap(e))
           .toList(),
@@ -34,14 +34,19 @@ class Quiz {
   }
 
   Map<String, dynamic> toMap({bool isUpdate = false}) {
-    return {
+    final map = {
       'title': title,
       'categoryId': categoryId,
-      'timeLimit': timeLimit,
       'questions': questions.map((e) => e.toMap()).toList(),
       if (isUpdate) 'updatedAt': DateTime.now(),
       'createdAt': createdAt ?? DateTime.now(),
     };
+
+    if (timeLimit != null) {
+      map['timeLimit'] = timeLimit!;
+    }
+
+    return map;
   }
 
   Quiz copyWith({

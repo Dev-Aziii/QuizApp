@@ -6,7 +6,6 @@ import 'package:itsreviewer_app/model/quiz.dart';
 import 'package:itsreviewer_app/theme/theme.dart';
 import 'package:itsreviewer_app/view/user/quiz_play_screen.dart';
 
-
 class CategoryScreen extends StatefulWidget {
   final Category category;
   const CategoryScreen({super.key, required this.category});
@@ -208,7 +207,12 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                 SizedBox(width: 16),
                                 Icon(Icons.timer_outlined, size: 16),
                                 SizedBox(width: 4),
-                                Text('${quiz.timeLimit} mins'),
+                                Text(
+                                  quiz.timeLimit != null
+                                      ? "${quiz.timeLimit} mins"
+                                      : "Unlimited",
+                                  style: TextStyle(fontSize: 16),
+                                ),
                               ],
                             ),
                           ],
