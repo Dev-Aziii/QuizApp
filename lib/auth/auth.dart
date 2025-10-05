@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'dart:developer';
 
 class AuthService {
   final FirebaseAuth auth = FirebaseAuth.instance;
@@ -29,8 +30,8 @@ class AuthService {
       if (user != null) await _createUserDocIfNotExists(user);
 
       return user;
-    } catch (e) {
-      print('Google Sign-In failed: $e');
+    } catch (e, stack) {
+      log("Google Sign-In failed:", error: e, stackTrace: stack);
       return null;
     }
   }
@@ -51,8 +52,8 @@ class AuthService {
       }
 
       return user;
-    } catch (e) {
-      print('Email sign-up failed: $e');
+    } catch (e, stack) {
+      log('Email sign-up failed:', error: e, stackTrace: stack);
       return null;
     }
   }
@@ -63,8 +64,8 @@ class AuthService {
       final UserCredential userCredential = await auth
           .signInWithEmailAndPassword(email: email, password: password);
       return userCredential.user;
-    } catch (e) {
-      print('Email sign-in failed: $e');
+    } catch (e, stack) {
+      log("Email sign-in failed:", error: e, stackTrace: stack);
       return null;
     }
   }

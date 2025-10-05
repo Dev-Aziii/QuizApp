@@ -260,8 +260,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 );
 
                 if (shouldLogout == true) {
-                  final _authService = AuthService();
-                  await _authService.signOut();
+                  final authService = AuthService();
+                  await authService.signOut();
                   if (context.mounted) {
                     Navigator.of(context).pushReplacementNamed('/login');
                   }
