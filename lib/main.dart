@@ -17,7 +17,6 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: "Smart Quiz",
       theme: ThemeData(primarySwatch: Colors.blue),
       home: const LoginPage(),
       routes: {

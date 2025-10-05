@@ -22,10 +22,34 @@ class _HomeScreenState extends State<HomeScreen> {
   List<String> _categoryFilters = ['All'];
   String _selectedFilter = "All";
 
+  String _firstName = "";
+
   @override
   void initState() {
     super.initState();
+    _fetchUserName();
     _fetchCategories();
+  }
+
+  Future<void> _fetchUserName() async {
+    final user = AuthService().currentUser;
+    if (user == null) return;
+
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (userDoc.exists) {
+        final fullName = userDoc.data()?['name'] ?? '';
+        setState(() {
+          _firstName = fullName.split(' ').first;
+        });
+      }
+    } catch (e) {
+      print("Error fetching user name: $e");
+    }
   }
 
   Future<void> _fetchCategories() async {
@@ -90,7 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   builder: (context) => const ConfirmDialog(
                     title: "Confirm Logout",
                     message: "Are you sure you want to log out?",
-                    confirmText: "Logout",
+                    confirmText: "Yes, Logout",
                     cancelText: "Cancel",
                     confirmColor: Colors.red,
                   ),
@@ -104,7 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             title: const Text(
-              "Smart Quiz",
+              "Start Review",
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -117,28 +141,30 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     SizedBox(height: kToolbarHeight + 16),
                     Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "Welcome, Learner!",
-                            style: TextStyle(
+                            _firstName.isEmpty
+                                ? "Welcome, Learner!"
+                                : "Welcome, $_firstName!",
+                            style: const TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
                           ),
-                          SizedBox(height: 8),
+                          const SizedBox(height: 8),
                           Text(
-                            "Lets test your skills",
+                            "Let's test your skills",
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: Colors.white.withOpacity(0.8),
                             ),
                           ),
-                          SizedBox(height: 8),
+                          const SizedBox(height: 8),
                           Container(
                             decoration: BoxDecoration(
                               color: Colors.white,
@@ -147,7 +173,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.1),
                                   blurRadius: 4,
-                                  offset: Offset(0, 2),
+                                  offset: const Offset(0, 2),
                                 ),
                               ],
                             ),
@@ -178,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       )
                                     : null,
                                 border: InputBorder.none,
-                                contentPadding: EdgeInsets.symmetric(
+                                contentPadding: const EdgeInsets.symmetric(
                                   vertical: 12,
                                 ),
                               ),
@@ -196,7 +222,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           SliverToBoxAdapter(
             child: Container(
-              margin: EdgeInsets.all(16),
+              margin: const EdgeInsets.all(16),
               height: 40,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
@@ -204,7 +230,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 itemBuilder: (context, index) {
                   final filter = _categoryFilters[index];
                   return Padding(
-                    padding: EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.only(right: 8),
                     child: ChoiceChip(
                       label: Text(
                         filter,
@@ -233,7 +259,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           SliverPadding(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             sliver: _filteredCategories.isEmpty
                 ? SliverToBoxAdapter(
                     child: Center(
@@ -249,12 +275,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           _buildCategoryCard(_filteredCategories[index], index),
                       childCount: _filteredCategories.length,
                     ),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
-                      childAspectRatio: 0.8,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                          childAspectRatio: 0.8,
+                        ),
                   ),
           ),
         ],
@@ -279,12 +306,12 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
             child: Container(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
-                    padding: EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: AppTheme.primaryColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
@@ -295,7 +322,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: AppTheme.primaryColor,
                     ),
                   ),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   Text(
                     category.name,
                     style: TextStyle(
@@ -304,7 +331,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: AppTheme.textPrimaryColor,
                     ),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
                     category.description,
                     style: TextStyle(
@@ -322,7 +349,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         )
         .animate(delay: Duration(milliseconds: 100 * index))
-        .slideY(begin: 0.5, end: 0, duration: Duration(milliseconds: 300))
+        .slideY(begin: 0.5, end: 0, duration: const Duration(milliseconds: 300))
         .fadeIn();
   }
 }

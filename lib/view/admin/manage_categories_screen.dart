@@ -158,17 +158,52 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
         builder: (context) => StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: const Text("Delete Category"),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Text(
+                "Delete Category",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Type the category name to confirm deletion."),
-                  SizedBox(height: 8),
+                  const Text(
+                    "Type the category name to confirm deletion.",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black54,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   TextField(
                     controller: confirmController,
                     decoration: InputDecoration(
                       hintText: "Category name",
-                      border: OutlineInputBorder(),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 12,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.redAccent),
+                      ),
                     ),
                     onChanged: (text) {
                       setDialogState(() {
@@ -178,42 +213,70 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
                   ),
                 ],
               ),
+              actionsAlignment: MainAxisAlignment.center,
+              actionsPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
               actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("Cancel"),
-                ),
-                TextButton(
-                  onPressed: isDeleteEnabled
-                      ? () async {
-                          // Delete all quizzes under this category
-                          final quizzes = await _firestore
-                              .collection('quizzes')
-                              .where('categoryId', isEqualTo: category.id)
-                              .get();
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 140,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDeleteEnabled
+                              ? Colors.redAccent
+                              : Colors.grey.shade400,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: isDeleteEnabled
+                            ? () async {
+                                // Delete all quizzes under this category
+                                final quizzes = await _firestore
+                                    .collection('quizzes')
+                                    .where('categoryId', isEqualTo: category.id)
+                                    .get();
 
-                          for (var quizDoc in quizzes.docs) {
-                            await _firestore
-                                .collection('quizzes')
-                                .doc(quizDoc.id)
-                                .delete();
-                          }
+                                for (var quizDoc in quizzes.docs) {
+                                  await _firestore
+                                      .collection('quizzes')
+                                      .doc(quizDoc.id)
+                                      .delete();
+                                }
 
-                          // Delete the category itself
-                          await _firestore
-                              .collection('categories')
-                              .doc(category.id)
-                              .delete();
+                                // Delete the category itself
+                                await _firestore
+                                    .collection('categories')
+                                    .doc(category.id)
+                                    .delete();
 
-                          Navigator.pop(context);
-                        }
-                      : null,
-                  child: Text(
-                    "Delete",
-                    style: TextStyle(
-                      color: isDeleteEnabled ? Colors.redAccent : Colors.grey,
+                                Navigator.pop(context);
+                              }
+                            : null,
+                        child: const Text(
+                          "Yes, Delete",
+                          style: TextStyle(color: Colors.white, fontSize: 14),
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text(
+                        "Cancel",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             );

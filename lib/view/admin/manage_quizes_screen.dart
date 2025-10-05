@@ -7,6 +7,7 @@ import 'package:itsreviewer_app/model/quiz.dart';
 import 'package:itsreviewer_app/theme/theme.dart';
 import 'package:itsreviewer_app/view/admin/add_quiz_screen.dart';
 import 'package:itsreviewer_app/view/admin/edit_quiz_screen.dart';
+import 'package:itsreviewer_app/view/widgets/confirm_dialog.dart';
 
 class ManageQuizesScreen extends StatefulWidget {
   final String? categoryId;
@@ -364,23 +365,12 @@ class _ManageQuizesScreenState extends State<ManageQuizesScreen> {
     } else if (value == "delete") {
       final confirm = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: Text("Delete Quiz"),
-          content: Text("Are you sure you want to delete this quiz?"),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context, false);
-              },
-              child: Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context, true);
-              },
-              child: Text("Delete", style: TextStyle(color: Colors.redAccent)),
-            ),
-          ],
+        builder: (context) => const ConfirmDialog(
+          title: "Delete Quiz",
+          message: "Are you sure you want to delete this quiz?",
+          confirmText: "Yes, Delete",
+          cancelText: "Cancel",
+          confirmColor: Colors.red,
         ),
       );
 

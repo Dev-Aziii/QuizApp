@@ -11,7 +11,7 @@ class ConfirmDialog extends StatelessWidget {
     super.key,
     required this.title,
     required this.message,
-    this.confirmText = "Confirm",
+    this.confirmText = "Yes, Logout",
     this.cancelText = "Cancel",
     this.confirmColor = Colors.red,
   });
@@ -41,36 +41,42 @@ class ConfirmDialog extends StatelessWidget {
         ),
       ),
       actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      actionsAlignment: MainAxisAlignment.spaceBetween,
+      actionsAlignment: MainAxisAlignment.center, // ✅ Center buttons
       actions: [
-        OutlinedButton(
-          style: OutlinedButton.styleFrom(
-            side: BorderSide(color: Colors.grey.shade400),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 150,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: confirmColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  elevation: 3,
+                ),
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(
+                  confirmText,
+                  style: const TextStyle(fontSize: 14, color: Colors.white),
+                ),
+              ),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          ),
-          onPressed: () => Navigator.pop(context, false),
-          child: Text(
-            cancelText,
-            style: const TextStyle(fontSize: 14, color: Colors.black87),
-          ),
-        ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: confirmColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+            const SizedBox(width: 12),
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text(
+                "Cancel",
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.black87,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            elevation: 3,
-          ),
-          onPressed: () => Navigator.pop(context, true),
-          child: Text(
-            confirmText,
-            style: const TextStyle(fontSize: 14, color: Colors.white),
-          ),
+          ],
         ),
       ],
     );

@@ -219,7 +219,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Image.asset(
-                    'assets/feedback.png',
+                    'assets/applogo.png',
                     fit: BoxFit.contain,
                     height: 80,
                   ),
@@ -253,7 +253,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   builder: (context) => const ConfirmDialog(
                     title: "Logout",
                     message: "Are you sure you want to log out?",
-                    confirmText: "Logout",
+                    confirmText: "Yes, logout",
                     cancelText: "Cancel",
                     confirmColor: Colors.red,
                   ),
