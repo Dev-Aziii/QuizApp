@@ -206,6 +206,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       ),
       drawer: Drawer(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
               color: Colors.transparent,
@@ -215,34 +216,125 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 right: 16,
                 bottom: 16,
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset(
-                    'assets/applogo.png',
-                    fit: BoxFit.contain,
-                    height: 80,
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'ITS Reviewer App',
-                    style: TextStyle(
-                      fontSize: 20,
-                      color: AppTheme.primaryColor,
-                      fontWeight: FontWeight.bold,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      'assets/applogo.png',
+                      fit: BoxFit.contain,
+                      height: 70,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    const Text(
+                      'ITS Reviewer App',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: AppTheme.primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             const Divider(),
+
+            ListTile(
+              leading: const Icon(
+                Icons.home_rounded,
+                color: AppTheme.primaryColor,
+              ),
+              title: const Text(
+                'Home',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              child: Text(
+                "Dashboard Actions",
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.quiz_rounded,
+                color: AppTheme.primaryColor,
+              ),
+              title: const Text(
+                'Quizzes',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ManageQuizesScreen(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.category_rounded,
+                color: AppTheme.primaryColor,
+              ),
+              title: const Text(
+                'Categories',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ManageCategoriesScreen(),
+                  ),
+                );
+              },
+            ),
+
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              child: Text(
+                "User Management",
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.people_rounded,
+                color: AppTheme.primaryColor,
+              ),
+              title: const Text(
+                'Manage Users',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              onTap: () {
+                // TODO: Navigate to ManageUsersScreen or implement user management logic
+              },
+            ),
+
             const Spacer(),
+
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
               title: const Text(
                 'Logout',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 16,
                   color: Colors.red,
                   fontWeight: FontWeight.w600,
                 ),
@@ -272,6 +364,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           ],
         ),
       ),
+
       body: StreamBuilder<QuerySnapshot>(
         stream: _firestore.collection('categories').snapshots(),
         builder: (context, categorySnapshot) {
