@@ -91,7 +91,7 @@ class _LoginPageState extends State<LoginPage> {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
           child: Column(
             children: [
-              Image.asset("assets/logo.png", height: 120),
+              Image.asset("assets/applogo.png", height: 120),
               const SizedBox(height: 24),
               const Text(
                 "Welcome to ITS Reviewer",
