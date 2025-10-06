@@ -23,8 +23,6 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginPage(),
         '/admin': (context) => const AdminHomeScreen(),
         '/user': (context) => const HomeScreen(),
-        '/adminDashboard': (context) => const AdminHomeScreen(),
-        '/userDashboard': (context) => const HomeScreen(),
       },
     );
   }

@@ -38,7 +38,7 @@ class _RegisterPageState extends State<RegisterPage> {
     setState(() => _isLoading = false);
 
     if (user != null) {
-      Navigator.pushReplacementNamed(context, '/userDashboard');
+      Navigator.pushReplacementNamed(context, '/user');
     } else {
       _showSnackBar("Registration failed. Please try again.");
     }
