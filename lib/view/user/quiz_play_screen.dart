@@ -131,12 +131,21 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
 
   void _toggleAnswer(int optionIndex) {
     setState(() {
+      final question = widget.quiz.questions[_currentQuestionIndex];
       final selected = _selectedAnswers[_currentQuestionIndex] ?? {};
-      if (selected.contains(optionIndex)) {
-        selected.remove(optionIndex);
+
+      if (question.correctOptionIndexes.length > 1) {
+        if (selected.contains(optionIndex)) {
+          selected.remove(optionIndex);
+        } else {
+          selected.add(optionIndex);
+        }
       } else {
-        selected.add(optionIndex);
+        selected
+          ..clear()
+          ..add(optionIndex);
       }
+
       _selectedAnswers[_currentQuestionIndex] = selected;
     });
   }
