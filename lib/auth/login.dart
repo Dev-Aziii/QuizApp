@@ -45,16 +45,18 @@ class _LoginPageState extends State<LoginPage> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
+
     final user = await _authService.signInWithEmail(
       _emailController.text.trim(),
       _passwordController.text.trim(),
     );
+
     setState(() => _isLoading = false);
 
     if (user != null) {
       await _navigateBasedOnRole(user.uid);
     } else {
-      _showSnackBar("Email/Password Sign-In failed.");
+      _showSnackBar("Account disabled or invalid credentials.");
     }
   }
 

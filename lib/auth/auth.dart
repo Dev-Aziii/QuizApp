@@ -64,7 +64,32 @@ class AuthService {
     try {
       final UserCredential userCredential = await auth
           .signInWithEmailAndPassword(email: email, password: password);
-      return userCredential.user;
+
+      final user = userCredential.user;
+      if (user == null) return null;
+
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (!userDoc.exists) {
+        log("No Firestore document found for user: ${user.uid}");
+        await auth.signOut();
+        return null;
+      }
+
+      final data = userDoc.data();
+      final bool isDisabled = data?['disabled'] == true;
+
+      if (isDisabled) {
+        log("User ${user.email} is disabled.");
+        await auth.signOut();
+
+        return null;
+      }
+
+      return user;
     } catch (e, stack) {
       log("Email sign-in failed:", error: e, stackTrace: stack);
       return null;

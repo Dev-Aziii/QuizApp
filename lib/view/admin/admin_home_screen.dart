@@ -4,6 +4,7 @@ import 'package:itsreviewer_app/theme/theme.dart';
 import 'package:itsreviewer_app/view/admin/manage_categories_screen.dart';
 import 'package:itsreviewer_app/view/admin/manage_quizes_screen.dart';
 import 'package:itsreviewer_app/auth/auth.dart';
+import 'package:itsreviewer_app/view/admin/manage_users_screen.dart';
 import 'package:itsreviewer_app/view/widgets/confirm_dialog.dart';
 
 class AdminHomeScreen extends StatefulWidget {
@@ -323,7 +324,12 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
               onTap: () {
-                // TODO: Navigate to ManageUsersScreen or implement user management logic
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ManageUsersScreen(),
+                  ),
+                );
               },
             ),
 
