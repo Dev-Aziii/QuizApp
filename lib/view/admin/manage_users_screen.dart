@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:itsreviewer_app/theme/theme.dart';
 
 class ManageUsersScreen extends StatefulWidget {
@@ -12,15 +11,11 @@ class ManageUsersScreen extends StatefulWidget {
 
 class _ManageUsersScreenState extends State<ManageUsersScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   Future<void> _deleteUser(String uid) async {
     try {
       // Delete from Firestore
       await _firestore.collection('users').doc(uid).delete();
-
-      // Note: Client apps can only delete the current logged-in user from Auth.
-      // For real admin deletion of any user, use Firebase Admin SDK in Cloud Functions.
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('User deleted successfully')),
