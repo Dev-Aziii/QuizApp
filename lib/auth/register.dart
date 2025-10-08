@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:itsreviewer_app/auth/auth.dart';
 import 'package:itsreviewer_app/theme/theme.dart';
+import 'package:top_snackbar_flutter/top_snack_bar.dart';
+import 'package:top_snackbar_flutter/custom_snack_bar.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -20,6 +22,15 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
+  void _showTopMessage(String message, {bool success = false}) {
+    showTopSnackBar(
+      Overlay.of(context),
+      success
+          ? CustomSnackBar.success(message: message)
+          : CustomSnackBar.error(message: message),
+    );
+  }
+
   void _togglePasswordVisibility() {
     setState(() => _obscurePassword = !_obscurePassword);
   }
@@ -38,16 +49,11 @@ class _RegisterPageState extends State<RegisterPage> {
     setState(() => _isLoading = false);
 
     if (user != null) {
+      _showTopMessage("Registration successful!", success: true);
       Navigator.pushReplacementNamed(context, '/user');
     } else {
-      _showSnackBar("Registration failed. Please try again.");
+      _showTopMessage("Registration failed. Please try again.");
     }
-  }
-
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -104,7 +110,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       const SizedBox(height: 40),
 
-                      // Name
+                      // --- Name Field ---
                       TextFormField(
                         controller: _nameController,
                         keyboardType: TextInputType.name,
@@ -118,7 +124,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       const SizedBox(height: 20),
 
-                      // Email
+                      // --- Email Field ---
                       TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
@@ -141,7 +147,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       const SizedBox(height: 20),
 
-                      // Password
+                      // --- Password Field ---
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
@@ -170,32 +176,33 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       const SizedBox(height: 40),
 
-                      // Button
+                      // --- Register Button ---
                       SizedBox(
                         height: 55,
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _handleRegister,
-                          style: Theme.of(context).elevatedButtonTheme.style
-                              ?.copyWith(
-                                shape: WidgetStatePropertyAll(
-                                  RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                ),
-                              ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
                           child: _isLoading
                               ? const CircularProgressIndicator(
                                   color: Colors.white,
                                 )
                               : const Text(
                                   "Continue",
-                                  style: TextStyle(fontSize: 16),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                  ),
                                 ),
                         ),
                       ),
                       const SizedBox(height: 30),
 
-                      // Footer
+                      // --- Footer ---
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [

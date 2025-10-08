@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'dart:developer';
 
@@ -62,8 +63,10 @@ class AuthService {
   // --- Email/Password Sign-In ---
   Future<User?> signInWithEmail(String email, String password) async {
     try {
-      final UserCredential userCredential = await auth
-          .signInWithEmailAndPassword(email: email, password: password);
+      final userCredential = await auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
       final user = userCredential.user;
       if (user == null) return null;
@@ -74,7 +77,6 @@ class AuthService {
           .get();
 
       if (!userDoc.exists) {
-        log("No Firestore document found for user: ${user.uid}");
         await auth.signOut();
         return null;
       }
@@ -83,15 +85,27 @@ class AuthService {
       final bool isDisabled = data?['disabled'] == true;
 
       if (isDisabled) {
-        log("User ${user.email} is disabled.");
         await auth.signOut();
-
         return null;
       }
 
       return user;
-    } catch (e, stack) {
-      log("Email sign-in failed:", error: e, stackTrace: stack);
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'invalid-credential' || e.code == 'wrong-password') {
+        log("Invalid email or password");
+      } else if (e.code == 'user-not-found') {
+        log("User not found");
+      } else if (e.code == 'invalid-email') {
+        log("Invalid email format");
+      } else {
+        log("FirebaseAuth error: ${e.code}");
+      }
+      return null;
+    } on PlatformException catch (e) {
+      log("PlatformException: ${e.code} - ${e.message}");
+      return null;
+    } catch (e) {
+      log("Unknown login error: $e");
       return null;
     }
   }

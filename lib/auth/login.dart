@@ -1,8 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:itsreviewer_app/auth/auth.dart';
 import 'package:itsreviewer_app/auth/register.dart';
 import 'package:itsreviewer_app/theme/theme.dart';
+import 'package:top_snackbar_flutter/top_snack_bar.dart';
+import 'package:top_snackbar_flutter/custom_snack_bar.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -18,45 +21,87 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  bool _isLoading = false;
+  bool _isEmailLoading = false;
+  bool _isGoogleLoading = false;
+
+  // --- Show Top SnackBar ---
+  void _showTopMessage(String message, {bool success = false}) {
+    showTopSnackBar(
+      Overlay.of(context),
+      success
+          ? CustomSnackBar.success(message: message)
+          : CustomSnackBar.error(message: message),
+    );
+  }
 
   // --- Google Sign-In ---
   Future<void> _handleGoogleSignIn() async {
+    if (_isGoogleLoading || _isEmailLoading) return;
+
     try {
-      setState(() => _isLoading = true);
+      setState(() => _isGoogleLoading = true);
       final user = await _authService.signInWithGoogle();
-      setState(() => _isLoading = false);
+      setState(() => _isGoogleLoading = false);
 
       if (user == null) {
-        _showSnackBar("Google Sign-In cancelled.");
+        _showTopMessage("Google Sign-In cancelled.");
         return;
       }
 
       await _navigateBasedOnRole(user.uid);
     } catch (e) {
-      setState(() => _isLoading = false);
-      _showSnackBar("An error occurred during Google Sign-In.");
+      setState(() => _isGoogleLoading = false);
+      _showTopMessage("Error during Google Sign-In.");
       debugPrint("Google Sign-In Error: $e");
     }
   }
 
   // --- Email/Password Sign-In ---
+  // --- Email/Password Sign-In ---
   Future<void> _handleEmailSignIn() async {
+    if (_isEmailLoading || _isGoogleLoading) return;
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    setState(() => _isEmailLoading = true);
 
-    final user = await _authService.signInWithEmail(
-      _emailController.text.trim(),
-      _passwordController.text.trim(),
-    );
+    try {
+      final user = await _authService.signInWithEmail(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+      );
 
-    setState(() => _isLoading = false);
+      setState(() => _isEmailLoading = false);
 
-    if (user != null) {
-      await _navigateBasedOnRole(user.uid);
-    } else {
-      _showSnackBar("Account disabled or invalid credentials.");
+      if (user != null) {
+        await _navigateBasedOnRole(user.uid);
+      } else {
+        _showTopMessage("Invalid credentials or account disabled.");
+      }
+    } on FirebaseAuthException catch (e) {
+      setState(() => _isEmailLoading = false);
+
+      switch (e.code) {
+        case 'invalid-email':
+          _showTopMessage("Please enter a valid email address.");
+          break;
+        case 'user-not-found':
+          _showTopMessage("No account found for this email.");
+          break;
+        case 'wrong-password':
+        case 'invalid-credential':
+          _showTopMessage("Incorrect email or password.");
+          break;
+        case 'user-disabled':
+          _showTopMessage("This account has been disabled.");
+          break;
+        default:
+          _showTopMessage("Login failed: ${e.message}");
+          break;
+      }
+    } catch (e) {
+      setState(() => _isEmailLoading = false);
+      debugPrint("Email sign-in failed: $e");
+      _showTopMessage("An unexpected error occurred. Please try again.");
     }
   }
 
@@ -68,7 +113,7 @@ class _LoginPageState extends State<LoginPage> {
         .get();
 
     if (!doc.exists) {
-      _showSnackBar("User document not found. Please contact support.");
+      _showTopMessage("User document not found. Please contact support.");
       return;
     }
 
@@ -78,17 +123,8 @@ class _LoginPageState extends State<LoginPage> {
     } else {
       Navigator.pushReplacementNamed(context, '/user');
     }
-  }
 
-  // --- SnackBar helper ---
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppTheme.primaryColor,
-      ),
-    );
+    _showTopMessage("Login successful!", success: true);
   }
 
   @override
@@ -115,7 +151,6 @@ class _LoginPageState extends State<LoginPage> {
                     child: Image.asset("assets/applogo.png", height: 100),
                   ),
                   const SizedBox(height: 24),
-
                   Text(
                     "Welcome Back!",
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -132,6 +167,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 32),
 
+                  // --- Login Card ---
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
@@ -155,8 +191,20 @@ class _LoginPageState extends State<LoginPage> {
                               labelText: "Email",
                               prefixIcon: Icon(Icons.email_outlined),
                             ),
-                            validator: (value) =>
-                                value!.isEmpty ? "Please enter email" : null,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return "Please enter your email";
+                              }
+                              // Simple regex to catch badly formatted emails
+                              final emailRegex = RegExp(
+                                r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$',
+                              );
+                              if (!emailRegex.hasMatch(value)) {
+                                return "Please enter a valid email address";
+                              }
+                              return null;
+                            },
+
                             keyboardType: TextInputType.emailAddress,
                           ),
                           const SizedBox(height: 16),
@@ -172,11 +220,13 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           const SizedBox(height: 24),
 
-                          // --- Sign In Button ---
+                          // --- Email Sign In Button ---
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: _isLoading ? null : _handleEmailSignIn,
+                              onPressed: _isEmailLoading
+                                  ? null
+                                  : _handleEmailSignIn,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppTheme.primaryColor,
                                 padding: const EdgeInsets.symmetric(
@@ -186,7 +236,7 @@ class _LoginPageState extends State<LoginPage> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              child: _isLoading
+                              child: _isEmailLoading
                                   ? const SizedBox(
                                       width: 24,
                                       height: 24,
@@ -254,9 +304,8 @@ class _LoginPageState extends State<LoginPage> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: _isLoading ? null : _handleGoogleSignIn,
-                      icon: Image.asset("assets/google.png", height: 24),
-                      label: _isLoading
+                      onPressed: _isGoogleLoading ? null : _handleGoogleSignIn,
+                      icon: _isGoogleLoading
                           ? const SizedBox(
                               width: 20,
                               height: 20,
@@ -265,13 +314,16 @@ class _LoginPageState extends State<LoginPage> {
                                 strokeWidth: 2,
                               ),
                             )
-                          : const Text(
-                              "Sign in with Google",
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.black87,
-                              ),
-                            ),
+                          : Image.asset("assets/google.png", height: 24),
+                      label: Text(
+                        _isGoogleLoading
+                            ? "Signing in..."
+                            : "Sign in with Google",
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.black87,
+                        ),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
