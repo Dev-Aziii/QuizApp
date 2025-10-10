@@ -24,20 +24,21 @@ The app supports **user authentication**, **role-based access (Admin/User)**, **
 ---
 
 ## 📂 Project Structure
-itsreviewer_app/
-│-- android/ # Android-specific files
-│-- ios/ # iOS-specific files
-│-- lib/ # Main Flutter app source code
-│ │-- view/ # UI screens
-│ │-- widgets/ # Reusable widgets
-│ │-- services/ # Firebase/Auth services
-│ │-- models/ # Data models
-│-- assets/ # Images, icons, etc.
-│-- test/ # Unit and widget tests
-│-- pubspec.yaml # Flutter dependencies
-│-- firebase.json # Firebase project config (safe to share)
-│-- firestore.rules # Firestore security rules
-│-- firestore.indexes.json# Firestore indexes
+      itsreviewer_app/
+      ├── android/                 # Android-specific files
+      ├── ios/                     # iOS-specific files
+      ├── lib/                     # Main Flutter app source code
+      │   ├── view/                # UI screens
+      │   ├── widgets/             # Reusable widgets
+      │   ├── services/            # Firebase/Auth services
+      │   └── models/              # Data models
+      ├── assets/                  # Images, icons, etc.
+      ├── test/                    # Unit and widget tests
+      ├── pubspec.yaml             # Flutter dependencies
+      ├── firebase.json            # Firebase project config
+      ├── firestore.rules          # Firestore security rules
+      └── firestore.indexes.json   # Firestore indexes
+
 
 ---
 
@@ -46,24 +47,16 @@ itsreviewer_app/
    ```bash
    git clone https://github.com/your-username/itsreviewer_app.git
    cd itsreviewer_app
-Install dependencies
-
-bash
-Copy code
-flutter pub get
-Configure Firebase
-
-Add your google-services.json in /android/app/.
-
-Add your GoogleService-Info.plist in /ios/Runner/.
-
-(Optional) Update firebase.json, firestore.rules, and firestore.indexes.json if needed.
-
-Run the app
-
-bash
-Copy code
-flutter run
+2. **Install dependencies**
+   ```bash
+   flutter pub get
+3.. **Configure Firebase**
+   - Add your google-services.json in /android/app/.
+   - Add your GoogleService-Info.plist in /ios/Runner/.
+   - (Optional) Update firebase.json, firestore.rules, and firestore.indexes.json if needed.
+4. **Run the App**
+   ```bash
+   flutter run
 
 ---
 
