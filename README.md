@@ -39,9 +39,6 @@ itsreviewer_app/
 │-- firestore.rules # Firestore security rules
 │-- firestore.indexes.json# Firestore indexes
 
-yaml
-Copy code
-
 ---
 
 ## ⚙️ Setup Instructions
